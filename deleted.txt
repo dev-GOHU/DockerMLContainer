@@ -1,0 +1,59 @@
+#########################
+
+# Set up time zone
+ENV TZ=Asia/Seoul
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
+
+# Create a non-root user and switch to it & Adding User to the sudoers File
+ARG USER_NAME=user
+ARG New_Password
+RUN useradd -m --ingroup sudo "$USER_NAME" && \
+    echo "$USER_NAME:$New_Password" | chpasswd
+
+RUN { \
+        if [ -n "$USER_NAME" ]; then \
+            useradd -m --ingroup sudo "$USER_NAME"; \
+        else \
+            echo "USER_NAME is not exist"; \
+            exit 2; \
+        fi; \
+        \
+        if [ -n "$New_Password" ]; then \
+             echo "$USER_NAME:$New_Password" | chpasswd; \
+        fi; \
+        \
+        chsh -s `which $CONTAINER_SHELL` $USER_NAME; \
+    }
+
+# All users can use /home/user as their home directory
+ENV HOME /home/${USER_NAME}
+RUN mkdir $HOME/.cache $HOME/.config && \
+    chmod -R 755 $HOME
+
+# Re-run ssh when the container restarts.
+RUN echo "sudo service ssh start > /dev/null" >> $HOME/.bashrc
+
+# Create a workspace directory
+WORKDIR $HOME
+USER $USER_NAME 
+
+######################
+# Install some basic utilities & python prerequisites
+# RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test
+# RUN apt-get update -y && apt-get install -y --no-install-recommends\
+#     apt-utils \
+#     tree \    
+#     bzip2 \
+#     libx11-6 \
+#     make \
+#     libssl-dev \
+#     libbz2-dev \
+#     libreadline-dev \
+#     libsqlite3-dev \
+#     libncursesw5-dev \
+#     xz-utils \
+#     tk-dev \
+#     libxml2-dev \
+#     libxmlsec1-dev \
+#     libffi-dev \
+#     liblzma-dev
